@@ -11,15 +11,9 @@ import pandas as pd
 import sys
 
 
-# ============================
-# Ustawienia i foldery wyjściowe
-# ============================
-helix_output_folder = 'helix_outputs'
+helix_output_folder = '/results/helix_outputs'
 os.makedirs(helix_output_folder, exist_ok=True)
 
-# ============================
-# Funkcje pomocnicze
-# ============================
 def load_matrix(file):
     return np.loadtxt(file, delimiter=',')
 
@@ -56,9 +50,9 @@ def pad_matrix(matrix, num_nodes):
         padded_matrix[:current_size, :current_size] = matrix
         return padded_matrix
 
-# ============================
+
 # Definicja datasetu i funkcja collate
-# ============================
+
 class GraphDataset(Dataset):
     def __init__(self, graphs, edge_lists, labels_list, file_names):
         self.graphs = graphs
@@ -92,17 +86,12 @@ def collate(samples):
     combined_labels = torch.cat(adjusted_labels, dim=0)
     return batched_graph, combined_edge_list, combined_labels, file_names
 
-# ============================
-# Przygotowanie danych testowych
-# ============================
-# Ścieżki do folderów z danymi
-# Pobranie ścieżki bazowej z argumentów
+
 if len(sys.argv) < 2:
     print("Usage: python script.py /path/to/folder")
     sys.exit(1)
 base_folder = sys.argv[1]
 
-# Ustawienie ścieżek do folderów
 new_amt_folder = os.path.join(base_folder, 'amt')
 new_cmt_folder = os.path.join(base_folder, 'cmt')
 new_idx_folder = os.path.join(base_folder, 'idx')
@@ -112,7 +101,7 @@ edge_lists = []
 labels_list = []
 file_names = []
 
-# Mapowanie nukleotydów na one-hot encoding
+# Mapowanie nukleotydów
 nucleotide_to_onehot = {
     'A': [1, 0, 0, 0],
     'C': [0, 1, 0, 0],
@@ -161,7 +150,7 @@ for amt_file in os.listdir(new_amt_folder):
         neigh_src, neigh_dst = np.where(neighborhood_matrix == 1)
         g.add_edges(neigh_src, neigh_dst)
 
-        # Inicjalizacja cech węzłów (one-hot encoding)
+        # Inicjalizacja cech węzłów (
         feature_size = 4
         node_features = torch.zeros(num_nodes, feature_size)
         for i in range(num_nodes):
@@ -185,7 +174,6 @@ for amt_file in os.listdir(new_amt_folder):
                 edge_features[idx_edge] = torch.tensor([0, 1])
         g.edata['feat'] = edge_features
 
-        # Przygotowanie krawędzi pozytywnych i negatywnych
         positive_indices = []
         negative_indices = []
         for i in range(num_nodes):
@@ -202,7 +190,7 @@ for amt_file in os.listdir(new_amt_folder):
         negative_edges = torch.tensor(negative_indices, dtype=torch.long)
         if len(positive_edges) == 0 or len(negative_edges) == 0:
             continue
-        # Zbalansowanie negatywnych krawędzi
+        # Zbalansowanie
         if len(negative_edges) >= len(positive_edges):
             balanced_negative_indices = torch.randperm(len(negative_edges))[:len(positive_edges)]
             balanced_negative_edges = negative_edges[balanced_negative_indices]
@@ -221,15 +209,14 @@ for amt_file in os.listdir(new_amt_folder):
         file_names.append(amt_file)
 
 if len(graphs) == 0:
-    raise ValueError("Brak nowych danych do testowania!")
+    raise ValueError("Brak danych do testowania!")
 
-# Użycie DataLoadera, aby korzystać z funkcji collate (można zmienić batch_size)
 dataset = GraphDataset(graphs, edge_lists, labels_list, file_names)
 test_loader = DataLoader(dataset, batch_size=1, collate_fn=collate)
 
-# ============================
-# Definicja modelu (ta sama architektura co w trakcie treningu)
-# ============================
+
+# Definicja modelu
+
 from dgl.nn import NNConv
 
 class GNNModel(nn.Module):
@@ -265,9 +252,8 @@ class GNNModel(nn.Module):
         logits = self.edge_predictor(edge_inputs)
         return logits
 
-# ============================
 # Wczytanie modelu
-# ============================
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = GNNModel(in_feats=4, edge_feats=2, hidden_feats=16, out_feats=2)
 model.load_state_dict(torch.load('model_v4.pth', map_location=device))
@@ -275,9 +261,8 @@ model.to(device)
 model.eval()
 print("Model został wczytany i jest gotowy do testowania.")
 
-# ============================
-# Funkcja do obliczania metryk globalnych
-# ============================
+
+# Funkcja do obliczania metryk 
 def calculate_metrics(logits, labels):
     _, predicted = torch.max(logits, 1)
     labels = labels.cpu().numpy()
@@ -291,9 +276,7 @@ def calculate_metrics(logits, labels):
         accuracy = np.mean(predicted == labels)
     return accuracy, precision, recall, f1
 
-# ============================
 # Testowanie modelu, obliczanie metryk oraz generowanie plików helix
-# ============================
 results = []
 all_accuracy = []
 all_precision = []
@@ -309,7 +292,7 @@ with torch.no_grad():
         logits = model(batched_graph, combined_edge_list)
         _, predicted = torch.max(logits, 1)
 
-        # Obliczenie metryk globalnych dla batcha
+        # Obliczenie metryk dla batcha
         accuracy, precision, recall, f1 = calculate_metrics(logits, combined_labels)
         all_accuracy.append(accuracy)
         all_precision.append(precision)
@@ -321,7 +304,7 @@ with torch.no_grad():
         num_nodes_list = [g.number_of_nodes() for g in graphs_batch]
         cum_nodes = np.cumsum([0] + num_nodes_list)
 
-        # Dla każdego grafu w batchu (przy batch_size=1, lista będzie jednoelementowa)
+       
         for i, graph in enumerate(graphs_batch):
             start = cum_nodes[i]
             end = cum_nodes[i+1]
@@ -369,7 +352,7 @@ with torch.no_grad():
         print("Pliki:", file_names_batch)
         print(f"Dokładność: {accuracy:.4f}, Precyzja: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}\n")
 
-# Obliczenie średnich metryk dla całego zestawu danych
+
 mean_accuracy = np.mean(all_accuracy)
 mean_precision = np.mean(all_precision)
 mean_recall = np.mean(all_recall)
@@ -380,7 +363,7 @@ print("Średnia precyzja: {:.4f}".format(mean_precision))
 print("Średni recall: {:.4f}".format(mean_recall))
 print("Średni F1: {:.4f}".format(mean_f1))
 
-# Dodanie średnich metryk do podsumowania wyników
+
 summary = {
     'Nazwa pliku': 'Średnio',
     'TP': '-',
@@ -388,11 +371,11 @@ summary = {
     'FP': '-',
     'PPV': mean_precision,
     'TPR': mean_recall,
-    'INF': '-'  # Możesz tutaj obliczyć średnią INF, jeśli jest to potrzebne
+    'INF': '-'  
 }
 results.append(summary)
 
 # Zapis wyników do pliku CSV
 df = pd.DataFrame(results)
-df.to_csv('results.csv', index=False)
+df.to_csv('/results/results.csv', index=False)
 print(df)
