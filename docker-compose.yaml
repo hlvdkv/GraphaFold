@@ -1,0 +1,7 @@
+services:
+  graphafold:
+    build: .
+    container_name: graphafold
+    volumes:
+      - ./results:/results
+    command: ["/app/run.sh", "/app/examples"]

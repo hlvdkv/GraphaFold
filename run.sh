@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Sprawdzenie czy podano argument (ścieżkę do folderu)
 if [ -z "$1" ]; then
   echo "Usage: $0 /path/to/folder"
   exit 1
@@ -8,12 +7,10 @@ fi
 
 BASE_DIR="$1"
 
-echo "Uruchamiam skrypt Pythona..."
+echo "Running Python script..."
 python3 script.py "$BASE_DIR"
 
+echo "Running R script for visualization..."
+Rscript visualization.r "$BASE_DIR"
 
-echo "Uruchamiam skrypt R do wizualizacji..."
-Rscript visualization.R "$BASE_DIR"
-
-
-echo "Gotowe."
+echo "Done."

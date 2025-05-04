@@ -1,0 +1,11 @@
+numpy
+torch==2.3.0
+scikit-learn
+matplotlib
+pandas
+pydantic
+PyYAML
+torchvision 
+torchaudio
+--find-links https://data.dgl.ai/wheels/torch-2.3/repo.html
+dgl

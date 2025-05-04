@@ -28,10 +28,10 @@ def load_idx_file(idx_file_path):
             index_str, code_str = parts
             index = int(index_str.strip()) - 1 
             code = code_str.strip()
-            # Wyodrębnienie nukleotydu
+            # Extract nucleotide
             if '.' in code:
                 _, nucleotide_code = code.split('.')
-                nucleotide = nucleotide_code[0]  # Pierwszy znak po kropce
+                nucleotide = nucleotide_code[0]  # First character after the dot
                 node_nucleotides_dict[index] = nucleotide
             else:
                 node_nucleotides_dict[index] = None
@@ -64,26 +64,26 @@ for amt_file in os.listdir(train_folder):
         cmt_file_path = os.path.join(cmt_folder, cmt_file)
         idx_file_path = os.path.join(idx_folder, idx_file)
         if not os.path.exists(cmt_file_path):
-            print(f'Brak pliku: {cmt_file_path}')
+            print(f'Missing file: {cmt_file_path}')
             continue
         if not os.path.exists(idx_file_path):
-            print(f'Brak pliku: {idx_file_path}')
+            print(f'Missing file: {idx_file_path}')
             continue
 
         cmt_matrix = load_matrix(cmt_file_path)
         amt_matrix = load_matrix(os.path.join(train_folder, amt_file))
 
-        # Macierz krawędzi niekanonicznych – > 1 to krawędź niekanoniczna
+        # Non-canonical edges: values > 1
         noncanonical_matrix = np.where(amt_matrix > 1, 1, 0)
         neighborhood_matrix = np.where(amt_matrix == -1, 1, 0)
 
         node_nucleotides_dict, max_index_idx = load_idx_file(idx_file_path)
 
-        # Ustalenie rzeczywistej liczby węzłów na podstawie cmt_matrix
+        # Determine actual number of nodes
         non_zero_rows = np.where(np.sum(np.abs(cmt_matrix), axis=1) > 0)[0]
         non_zero_cols = np.where(np.sum(np.abs(cmt_matrix), axis=0) > 0)[0]
         if len(non_zero_rows) == 0 and len(non_zero_cols) == 0:
-            print(f"Macierz {cmt_file_path} jest pusta.")
+            print(f"Matrix {cmt_file_path} is empty.")
             continue
         max_index_cmt = max(np.max(non_zero_rows), np.max(non_zero_cols))
 
@@ -94,15 +94,15 @@ for amt_file in os.listdir(train_folder):
         noncanonical_matrix = pad_matrix(noncanonical_matrix, num_nodes)
         neighborhood_matrix = pad_matrix(neighborhood_matrix, num_nodes)
 
-        # Krawędzie z macierzy kanonicznej
+        # Canonical edges
         src, dst = np.where(cmt_matrix == 1)
         graph = dgl.graph((src, dst), num_nodes=num_nodes)
 
-        # Dodanie krawędzi sąsiedztwa
+        # Add neighborhood edges
         neigh_src, neigh_dst = np.where(neighborhood_matrix == 1)
         graph.add_edges(neigh_src, neigh_dst)
 
-        # Mapowanie nukleotydów na one-hot encoding
+        # Nucleotide one-hot encoding
         nucleotide_to_onehot = {
             'A': [1, 0, 0, 0],
             'C': [0, 1, 0, 0],
@@ -111,8 +111,8 @@ for amt_file in os.listdir(train_folder):
             None: [0, 0, 0, 0] 
         }
 
-        # Inicjalizacja cech węzłów
-        feature_size = 4  # one-hot encoding nukleotydów
+        # Node features
+        feature_size = 4  # one-hot encoding of nucleotides
         node_features = torch.zeros(num_nodes, feature_size)
         for i in range(num_nodes):
             nucleotide = node_nucleotides_dict.get(i, None)
@@ -136,7 +136,7 @@ for amt_file in os.listdir(train_folder):
 
         positive_indices = [(i, j) for i in range(num_nodes) for j in range(num_nodes) if noncanonical_matrix[i, j] == 1]
 
-        # negatywne próbkowanie
+        # Negative sampling
         num_neg_samples_per_node = 5
         negative_indices = []
         for i in range(num_nodes):
@@ -154,18 +154,18 @@ for amt_file in os.listdir(train_folder):
         if len(negative_indices) == 0:
             continue
 
-        # Zamiana na tensory
+        # Convert to tensors
         positive_edges = torch.tensor(positive_indices, dtype=torch.long)
         negative_edges = torch.tensor(negative_indices, dtype=torch.long)
 
-        # Zbalansowanie
+        # Balance the dataset
         if len(negative_edges) >= len(positive_edges):
             perm = torch.randperm(len(negative_edges))
             balanced_negative_edges = negative_edges[perm[:len(positive_edges)]]
         else:
             balanced_negative_edges = negative_edges
 
-        # Połączenie krawędzi oraz etykiet
+        # Combine edges and labels
         combined_edges = torch.cat([positive_edges, balanced_negative_edges], dim=0)
         edge_labels = torch.cat([
             torch.ones(len(positive_edges)),
@@ -177,7 +177,7 @@ for amt_file in os.listdir(train_folder):
         labels_list.append(edge_labels)
         file_names.append(amt_file)  
 
-# Definicja datasetu
+# Dataset definition
 class GraphDataset(torch.utils.data.Dataset):
     def __init__(self, graphs, edge_lists, labels_list, file_names):
         self.graphs = graphs
@@ -191,28 +191,26 @@ class GraphDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.graphs[idx], self.edge_lists[idx], self.labels_list[idx], self.file_names[idx]
 
-# Funkcja collate do batchowania grafów
+# Collate function for batching
 def collate(samples):
     graphs, edge_lists, labels, file_names = map(list, zip(*samples))
     batched_graph = dgl.batch(graphs)
-    # Obliczenie przesunięcia indeksów węzłów dla każdego grafu
     node_id_offsets = []
     offset = 0
     for g in graphs:
         node_id_offsets.append(offset)
         offset += g.number_of_nodes()
-    # Dostosowanie edge_lists
     adjusted_edge_lists = []
     adjusted_labels = []
     for edge_list, label, offset in zip(edge_lists, labels, node_id_offsets):
-        adjusted_edges = edge_list + offset  # Przesunięcie indeksów węzłów
+        adjusted_edges = edge_list + offset
         adjusted_edge_lists.append(adjusted_edges)
         adjusted_labels.append(label)
     combined_edge_list = torch.cat(adjusted_edge_lists, dim=0)
     combined_labels = torch.cat(adjusted_labels, dim=0)
     return batched_graph, combined_edge_list, combined_labels, file_names
 
-# Tworzenie datasetu i podział na zbiory
+# Create dataset and split
 dataset = GraphDataset(graphs, edge_lists, labels_list, file_names)
 indices = list(range(len(dataset)))
 train_indices, temp_indices = train_test_split(indices, test_size=0.3, random_state=42)
@@ -224,8 +222,8 @@ train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, collate_fn
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, collate_fn=collate)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, collate_fn=collate)
 
-# Model GNN 
-from dgl.nn import NNConv  # Warstwa obsługująca cechy krawędzi
+# GNN model
+from dgl.nn import NNConv
 
 class GNNModel(nn.Module):
     def __init__(self, in_feats, edge_feats, hidden_feats, out_feats):
@@ -251,7 +249,6 @@ class GNNModel(nn.Module):
         h = F.relu(h)
         h = self.conv2(g, h, e)
         h = F.relu(h)
-        # Predykcja krawędzi
         src_nodes = edge_list[:, 0]
         dst_nodes = edge_list[:, 1]
         src_h = h[src_nodes]
@@ -260,7 +257,7 @@ class GNNModel(nn.Module):
         logits = self.edge_predictor(edge_inputs)
         return logits
 
-# Inicjalizacja modelu
+# Model initialization
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = GNNModel(in_feats=4, edge_feats=2, hidden_feats=16, out_feats=2)
 model.to(device)
@@ -281,7 +278,7 @@ def calculate_metrics(logits, labels):
         accuracy = np.mean(predicted == labels)
     return accuracy, precision, recall, f1
 
-# Trening
+# Training loop
 num_epochs = 80
 best_val_loss = float('inf')
 train_losses = []
@@ -328,11 +325,11 @@ for epoch in range(num_epochs):
     val_losses.append(val_loss)
     val_accuracies.append(val_accuracy)
     
-    print(f'Epoka {epoch+1}, Strata treningowa: {epoch_loss:.4f}, Strata walidacyjna: {val_loss:.4f}')
-    print(f'Dokładność treningowa: {epoch_accuracy:.4f}, Dokładność walidacyjna: {val_accuracy:.4f}')
+    print(f'Epoch {epoch+1}, Training loss: {epoch_loss:.4f}, Validation loss: {val_loss:.4f}')
+    print(f'Training accuracy: {epoch_accuracy:.4f}, Validation accuracy: {val_accuracy:.4f}')
     
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         torch.save(model.state_dict(), 'model_v4.pth')
 
-print("Koniec treningu")
+print("Training complete")
