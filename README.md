@@ -82,10 +82,10 @@ Installed via Docker:
 
 ## License
 
-MIT — feel free to use, modify, and share.
+CC-BY 4.0
 
 ---
 
 ##  Author
 
-Built by Paulina Hładki. Contributions welcome!
+Built by Paulina Hladki. Contributions welcome!
