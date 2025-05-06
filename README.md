@@ -25,8 +25,40 @@ docker compose up --build
 ```
 
 ---
+### Local installation
+Run:
+```
+pip install .
+```
+Then you need to install the following dependencies manually:
+```
+pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/repo.html
+```
+---
 
-## Input Requirements
+## Run prediction
+
+### Input format
+GraphaFold requires the RNA sequence and canonical secondary structure in dotbracket notation. This format is then parsed into a graph structure.
+The input file should be in the following format:
+```
+>strand_1
+GAGA
+(..(
+
+>strand_2
+UAGC
+)..)
+```
+
+### Run command
+Then `GraphaFold` can be run with the following command:
+```
+graphafold -i examples/example.dot -o results/
+```
+The output will be saved in the `results/` in the `*.amt` format.
+
+## Input Requirements for training and evaluation
 
 ### `cmt/` (Canonical Matrix)
 - CSV square matrix (`.cmt`) with 1s marking canonical edges.
@@ -43,6 +75,15 @@ docker compose up --build
 > If `amt/` is not provided, GraphaFold will **still run predictions**, but no evaluation or visual comparison will be done.
 
 ---
+
+## Training from scratch
+
+### Data preparation
+TODO
+### Run training
+```
+python src/graphafold/train.py --train_dir examples/ --model_dir models/ --epochs 100 --batch_size 32 --lr 0.001
+```
 
 ## Output
 
@@ -68,6 +109,7 @@ GraphaFold uses a GNN model (`model_v4.pth`) with the following architecture:
 - **Prediction:** binary classification of edges (non-canonical vs. not)
 
 ---
+
 
 ## Dependencies
 

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 
-helix_output_folder = '/results/helix_outputs'
+helix_output_folder = 'results/helix_outputs'
 os.makedirs(helix_output_folder, exist_ok=True)
 
 def load_matrix(file):
@@ -244,7 +244,7 @@ class GNNModel(nn.Module):
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = GNNModel(in_feats=4, edge_feats=2, hidden_feats=16, out_feats=2)
-model.load_state_dict(torch.load('model_v4.pth', map_location=device))
+model.load_state_dict(torch.load('checkpoints/model_v4.pth', map_location=device))
 model.to(device)
 model.eval()
 
@@ -358,4 +358,4 @@ if has_amt:
     results.append(summary)
 
     df = pd.DataFrame(results)
-    df.to_csv('/results/results.csv', index=False)
+    df.to_csv('results/results.csv', index=False)
