@@ -289,7 +289,7 @@ with torch.no_grad():
             true_labels = combined_labels[mask]
             predicted_labels = predicted[mask]
 
-            predicted_edges = [tuple(edge.cpu().numpy()) for edge, label in zip(edge_list, predicted_labels) if label == 1]
+            predicted_edges = np.array([tuple(edge.cpu().numpy()) for edge, label in zip(edge_list, predicted_labels) if label == 1])
             print(f"Predicted edges for {file_names_batch[i]}: {predicted_edges}")
 
             if has_amt:
