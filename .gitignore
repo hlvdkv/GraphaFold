@@ -1,3 +1,15 @@
 *.pyc
 *.egg-info
 results/
+large/
+casp/
+
+my_exmp/
+examples-orig/
+exp1/*
+exp2/*
+examples/*
+*.txt
+*.csv
+
+

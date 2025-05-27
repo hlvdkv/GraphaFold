@@ -1,1 +1,1 @@
-from .model import GNNModel
+from .gnn_component import GNNModel

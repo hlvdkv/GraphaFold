@@ -108,6 +108,7 @@ nucleotide_to_onehot = {
     None: [0, 0, 0, 0]
 }
 
+
 for amt_file in amt_files:
     cmt_file = amt_file.replace('.amt', '.cmt')
     idx_file = amt_file.replace('.amt', '.idx')
@@ -122,11 +123,11 @@ for amt_file in amt_files:
     if has_amt:
         amt_matrix = load_matrix(os.path.join(new_amt_folder, amt_file))
         noncanonical_matrix = np.where(amt_matrix > 1, 1, 0)
-        neighborhood_matrix = np.where(amt_matrix == -1, 1, 0)
+        neighborhood_matrix = np.where(cmt_matrix == -1, 1, 0)
     else:
         amt_matrix = np.zeros_like(cmt_matrix)
         noncanonical_matrix = np.zeros_like(cmt_matrix)
-        neighborhood_matrix = np.zeros_like(cmt_matrix)
+        neighborhood_matrix = np.where(cmt_matrix == -1, 1, 0)
 
     node_nucleotides_dict, max_index_idx = load_idx_file(idx_file_path)
 
@@ -145,8 +146,14 @@ for amt_file in amt_files:
 
     src, dst = np.where(cmt_matrix == 1)
     g = dgl.graph((src, dst), num_nodes=num_nodes)
+    num_edges = g.number_of_edges()
+    print("edges150", num_edges)
     neigh_src, neigh_dst = np.where(neighborhood_matrix == 1)
     g.add_edges(neigh_src, neigh_dst)
+    
+    num_edges = g.number_of_edges()
+    print("edges155", num_edges)
+
 
     feature_size = 4
     node_features = torch.zeros(num_nodes, feature_size)
@@ -157,10 +164,13 @@ for amt_file in amt_files:
     g.ndata['feat'] = node_features
 
     num_edges = g.number_of_edges()
+    
     edge_features = torch.zeros(num_edges, 2)
     u, v = g.edges()
+    
     u = u.numpy()
     v = v.numpy()
+    count=0
     for idx_edge, (i, j) in enumerate(zip(u, v)):
         if noncanonical_matrix[i, j] == 1:
             edge_features[idx_edge] = torch.tensor([1, 1])
@@ -168,25 +178,58 @@ for amt_file in amt_files:
             edge_features[idx_edge] = torch.tensor([1, 0])
         else:
             edge_features[idx_edge] = torch.tensor([0, 1])
+        count+=1
+
+    print("count:", count)
     g.edata['feat'] = edge_features
 
+    # positive_indices = []
+    # negative_indices = []
+    # for i in range(num_nodes):
+    #     for j in range(num_nodes):
+    #         if i == j:
+    #             continue
+    #         if noncanonical_matrix[i, j] == 1:
+    #             positive_indices.append((i, j))
+    #         else:
+    #             nucleotide_i = node_nucleotides_dict.get(i, None)
+    #             nucleotide_j = node_nucleotides_dict.get(j, None)
+    #             if nucleotide_i is None or nucleotide_j is None:
+    #                 continue
+    #             negative_indices.append((i, j))
+
+    idxs = []
+    for i in range(num_nodes):
+        ok=True
+        for j in range(num_nodes):
+            if cmt_matrix[i, j] > 0:
+                ok=False
+                break
+        if ok:
+            idxs.append(i)
+    print("idxs:", idxs)
+    print("len idxs:", len(idxs))
     positive_indices = []
     negative_indices = []
-    for i in range(num_nodes):
-        for j in range(num_nodes):
-            if noncanonical_matrix[i, j] == 1:
-                positive_indices.append((i, j))
+
+
+    for i, vali in enumerate(idxs):
+        for j, valj in enumerate(idxs):
+            if i == j:
+                continue
+            if cmt_matrix[vali, valj] == -1:
+                # negative_indices.append((i, j))
+                continue
             else:
-                nucleotide_i = node_nucleotides_dict.get(i, None)
-                nucleotide_j = node_nucleotides_dict.get(j, None)
-                if nucleotide_i is None or nucleotide_j is None:
-                    continue
-                negative_indices.append((i, j))
+                positive_indices.append((vali, valj))
+
+    print("positive_indices:", len(positive_indices))
+    print("negative_indices:", len(negative_indices))
     positive_edges = torch.tensor(positive_indices, dtype=torch.long) if len(positive_indices) > 0 else torch.empty((0, 2), dtype=torch.long)
     negative_edges = torch.tensor(negative_indices, dtype=torch.long) if len(negative_indices) > 0 else torch.empty((0, 2), dtype=torch.long)
 
-    if len(positive_edges) == 0 or len(negative_edges) == 0:
-        continue
+    # if len(positive_edges) == 0 or len(negative_edges) == 0:
+    #     continue
 
     if len(negative_edges) >= len(positive_edges):
         balanced_negative_indices = torch.randperm(len(negative_edges))[:len(positive_edges)]
@@ -199,7 +242,8 @@ for amt_file in amt_files:
         torch.ones(len(positive_edges)),
         torch.zeros(len(balanced_negative_edges))
     ]).long()
-
+    print("combined_edges:", combined_edges)
+    print("len combined_edges:", len(combined_edges))
     graphs.append(g)
     edge_lists.append(combined_edges)
     labels_list.append(edge_labels)
@@ -223,7 +267,8 @@ class GNNModel(nn.Module):
         self.edge_predictor = nn.Sequential(
             nn.Linear(hidden_feats * 2, hidden_feats),
             nn.ReLU(),
-            nn.Linear(hidden_feats, out_feats)
+            nn.Linear(hidden_feats, out_feats),
+            nn.Softmax(dim=1)
         )
 
     def forward(self, g, edge_list):
@@ -239,6 +284,8 @@ class GNNModel(nn.Module):
         src_h = h[src_nodes]
         dst_h = h[dst_nodes]
         edge_inputs = torch.cat([src_h, dst_h], dim=1)
+        # print("shape edge_inputs:", edge_inputs.shape)
+        # print("edge_inputs:", edge_inputs)
         logits = self.edge_predictor(edge_inputs)
         return logits
 
@@ -275,7 +322,60 @@ with torch.no_grad():
         combined_labels = combined_labels.to(device)
 
         logits = model(batched_graph, combined_edge_list)
+        raw_logits = logits.cpu().numpy().copy()
+        raw_combined = combined_edge_list.cpu().numpy().copy()
+        print("length logits:", len(logits))
+        print(logits)
+        print(len(logits) == len(combined_edge_list))
+        # sort logits by column 1
+        logits_1 = logits[:, 1]
+        combined_copy = combined_edge_list.cpu().numpy().copy()
+        
+        order = np.arange(len(logits_1))
+        results = []
+        indexes = []
+        while len(combined_copy) > 0:
+            max_index = np.argmax(logits_1)
+            results.append(combined_copy[max_index])
+            selected_pair = combined_copy[max_index]
+
+            for i in range(len(combined_copy)-1, -1, -1):
+                if (combined_copy[i][0] == selected_pair[0] or combined_copy[i][1] == selected_pair[1]) \
+                    or (combined_copy[i][0] == selected_pair[1] or combined_copy[i][1] == selected_pair[0]):
+                    combined_copy = np.delete(combined_copy, i, axis=0)
+                    logits_1 = np.delete(logits_1, i)
+        
+        dict_res = {}
+        for x, y in results:
+            name = f"{x}_{y}"
+            name2 = f"{y}_{x}"
+            if name not in dict_res:
+                dict_res[name] = 1
+            if name2 not in dict_res:
+                dict_res[name2] = 1
+        
+        index=0
+        for x, y in combined_edge_list.cpu().numpy():
+            name = f"{x}_{y}"
+            if name in dict_res:
+                logits[index, 0] = 0
+                logits[index, 1] = 1
+            else:
+                logits[index, 0] = 1
+                logits[index, 1] = 0
+            index+=1
+            
+            
+
+        # print("results:", np.array(results))
+        # predicted = np.zeros(logits.shape)
+        # predicted[:, 0] = 1
+        
+
+        # print("predicted:", predicted)
         _, predicted = torch.max(logits, 1)
+        print('-----')
+        # print(predicted)
 
         graphs_batch = dgl.unbatch(batched_graph)
         num_nodes_list = [g.number_of_nodes() for g in graphs_batch]
@@ -290,12 +390,33 @@ with torch.no_grad():
             predicted_labels = predicted[mask]
 
             predicted_edges = np.array([tuple(edge.cpu().numpy()) for edge, label in zip(edge_list, predicted_labels) if label == 1])
+            print("len true_labels:", len(true_labels))
+            print("len predicted_edges:", len(predicted_edges))
             print(f"Predicted edges for {file_names_batch[i]}: {predicted_edges}")
 
+            print("Edges_logits")
+            edge_logits = np.array([tuple([tuple(edge), tuple(log)]) for edge, log in zip(raw_combined, raw_logits, strict=True)])
+            edge_logits = edge_logits.reshape(-1, 4)
+            print(edge_logits)
+            # save edge_logits to csv file
+            
+            np.savetxt("logits.csv", edge_logits, delimiter=",", fmt="%s")
+            print(edge_logits.shape)
+            print("-----")
             if has_amt:
-                gt_edges = [tuple(edge.cpu().numpy()) for edge, label in zip(edge_list, true_labels) if label == 1]
-                gt_edges_sorted = set(map(lambda x: tuple(sorted(x)), gt_edges))
+                # gt_edges = [tuple(edge.cpu().numpy()) for edge, label in zip(edge_list, true_labels) if label == 1]
+                # gt_edges_sorted = set(map(lambda x: tuple(sorted(x)), gt_edges))
+                predicted_edges = set([(int(x),int(y)) for x,y in predicted_edges if x < y])
                 pred_edges_sorted = set(map(lambda x: tuple(sorted(x)), predicted_edges))
+                
+                amt_matrix = load_matrix(os.path.join(new_amt_folder, amt_file))
+                nc_x, nc_y = np.where(amt_matrix > 1)
+                gt_edges = set([(int(x),int(y)) for x,y in zip(nc_x, nc_y) if x < y])
+                gt_edges_sorted = set(map(lambda x: tuple(sorted(x)), gt_edges))
+
+
+                # print("gt_edges:", gt_edges_sorted)
+                # print("pred_edges_sorted:", pred_edges_sorted)
 
                 tp = len(gt_edges_sorted & pred_edges_sorted)
                 fn = len(gt_edges_sorted - pred_edges_sorted)
@@ -345,6 +466,7 @@ if has_amt:
     print("Mean precision: {:.4f}".format(mean_precision))
     print("Mean recall: {:.4f}".format(mean_recall))
     print("Mean f1: {:.4f}".format(mean_f1))
+    print("Mean inf: {:.4f}".format(mean_inf))
 
     summary = {
         'File name': 'Mean',

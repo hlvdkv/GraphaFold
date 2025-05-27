@@ -42,13 +42,9 @@ pip install dgl -f https://data.dgl.ai/wheels/torch-2.3/repo.html
 GraphaFold requires the RNA sequence and canonical secondary structure in dotbracket notation. This format is then parsed into a graph structure.
 The input file should be in the following format:
 ```
->strand_1
-GAGA
-(..(
-
->strand_2
-UAGC
-)..)
+>sample_1
+GAGA;UAGC
+(..(;)..)
 ```
 
 ### Run command

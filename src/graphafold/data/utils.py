@@ -47,8 +47,8 @@ def cmt2graph(cmt_file_path, idx_file_path, graphs=[], edge_lists=[], labels_lis
 
     cmt_matrix = load_matrix(cmt_file_path)
 
-    noncanonical_matrix = np.zeros_like(cmt_matrix)
-    neighborhood_matrix = np.zeros_like(cmt_matrix)
+    noncanonical_matrix = cmt_matrix # np.zeros_like(cmt_matrix)
+    neighborhood_matrix = np.where(cmt_matrix == -1, 1, 0) # np.zeros_like(cmt_matrix)
 
     node_nucleotides_dict, max_index_idx = load_idx_file(idx_file_path)
     non_zero_rows = np.where(np.sum(np.abs(cmt_matrix), axis=1) > 0)[0]
