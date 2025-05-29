@@ -2,35 +2,60 @@ import os
 import dgl
 import numpy as np
 import torch
-
 from graphafold.const import nucleotide_to_onehot
 
 def load_matrix(file):
     return np.loadtxt(file, delimiter=',')
 
 def load_idx_file(idx_file_path):
-    node_nucleotides_dict = {}
-    indices = []
     with open(idx_file_path, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split(',')
-            if len(parts) != 2:
-                continue
-            index_str, code_str = parts
-            index = int(index_str.strip()) - 1
-            code = code_str.strip()
-            if '.' in code:
-                _, nucleotide_code = code.split('.')
-                nucleotide = nucleotide_code[0]
-                node_nucleotides_dict[index] = nucleotide
-            else:
-                node_nucleotides_dict[index] = None
-            indices.append(index)
-    max_index = max(indices) if indices else -1
-    return node_nucleotides_dict, max_index
+        lines = f.readlines()
+    lines = [line.strip() for line in lines if line.strip() and not line.startswith('#')]
+    index_to_nt = {}
+    neighbors = []
+
+    parsed = []
+
+    for line in lines:
+        index_str, rna = line.strip().split(',')
+        index = int(index_str)
+        chain, rest = rna.split('.')
+        nt = rest[0]
+        res_id = int(rest[1:])
+        parsed.append((index, chain, nt, res_id))
+        index_to_nt[index] = nt
+
+    for i in range(1, len(parsed)):
+        idx1, chain1, _, res1 = parsed[i - 1]
+        idx2, chain2, _, res2 = parsed[i]
+        if chain1 == chain2 and res2 - res1 == 1:
+            neighbors.append((idx1-1, idx2-1))
+
+    return index_to_nt, neighbors
+
+# def load_idx_file(idx_file_path):
+#     node_nucleotides_dict = {}
+#     indices = []
+#     with open(idx_file_path, 'r') as f:
+#         for line in f:
+#             line = line.strip()
+#             if not line:
+#                 continue
+#             parts = line.split(',')
+#             if len(parts) != 2:
+#                 continue
+#             index_str, code_str = parts
+#             index = int(index_str.strip()) - 1
+#             code = code_str.strip()
+#             if '.' in code:
+#                 _, nucleotide_code = code.split('.')
+#                 nucleotide = nucleotide_code[0]
+#                 node_nucleotides_dict[index] = nucleotide
+#             else:
+#                 node_nucleotides_dict[index] = None
+#             indices.append(index)
+#     max_index = max(indices) if indices else -1
+#     return node_nucleotides_dict, max_index
 
 def pad_matrix(matrix, num_nodes):
     current_size = matrix.shape[0]

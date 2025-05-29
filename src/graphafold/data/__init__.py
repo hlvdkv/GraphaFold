@@ -5,3 +5,4 @@ from .utils import (
     load_idx_file,
     load_matrix,
 )
+from .sample import Sample

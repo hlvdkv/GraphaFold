@@ -44,7 +44,8 @@ class Model(nn.Module):
         node_embeddings = self.gnn_model(g, node_features=sequence_embedding)
         src = node_embeddings[edge_candidates[0]]  # [K, dim]
         dst = node_embeddings[edge_candidates[1]]  # [K, dim]
-
+        # dot-product for scores
+        # scores = src * dst
         # Concatenate and classify
         combined = torch.cat([src, dst], dim=-1)  # [K, 2 * dim]
         logits = self.classifier(combined).squeeze(-1)  # [K]

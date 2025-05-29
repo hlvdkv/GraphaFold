@@ -23,6 +23,7 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 graphafold = "graphafold.predict:main"
+graphafold_train = "graphafold.train:main"
 
 [tools.ruff]
 src = ["src"]
@@ -45,6 +46,10 @@ lint.ignore = [
     "PLR0913", # Too many arguments to init (> 5)
 ]
 
+[tool.ruff.lint]
+# Optionally, ensure fixes are applied for import sorting
+fix = true
+
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = [
     "F401", # Imported but unused
@@ -63,3 +68,9 @@ keep-runtime-typing = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "wandb>=0.19.11",
+]
