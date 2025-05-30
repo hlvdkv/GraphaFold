@@ -31,31 +31,14 @@ def load_idx_file(idx_file_path):
         if chain1 == chain2 and res2 - res1 == 1:
             neighbors.append((idx1-1, idx2-1))
 
-    return index_to_nt, neighbors
+    return index_to_nt, np.array(neighbors)
 
-# def load_idx_file(idx_file_path):
-#     node_nucleotides_dict = {}
-#     indices = []
-#     with open(idx_file_path, 'r') as f:
-#         for line in f:
-#             line = line.strip()
-#             if not line:
-#                 continue
-#             parts = line.split(',')
-#             if len(parts) != 2:
-#                 continue
-#             index_str, code_str = parts
-#             index = int(index_str.strip()) - 1
-#             code = code_str.strip()
-#             if '.' in code:
-#                 _, nucleotide_code = code.split('.')
-#                 nucleotide = nucleotide_code[0]
-#                 node_nucleotides_dict[index] = nucleotide
-#             else:
-#                 node_nucleotides_dict[index] = None
-#             indices.append(index)
-#     max_index = max(indices) if indices else -1
-#     return node_nucleotides_dict, max_index
+def custom_collate(batch):
+    graphs, labels1, labels2 = zip(*batch)
+    batched_graph = dgl.batch(graphs)
+
+    # You can return labels as-is (list of lists) or process them here
+    return batched_graph, list(labels1), list(labels2)
 
 def pad_matrix(matrix, num_nodes):
     current_size = matrix.shape[0]

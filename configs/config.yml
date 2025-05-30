@@ -1,7 +1,9 @@
 epochs: 10000
-train_dir: data/train/
-val_dir: data/val/
 batch_size: 32
+num_workers: 1
+data:
+  train_dir: prep_data
+  val_dir: data/val/
 model:
   seq_hidden_dim: 512
   cls_hidden_dim: 256

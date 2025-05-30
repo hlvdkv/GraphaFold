@@ -23,7 +23,7 @@ class TrainDataset(Dataset):
             data = pickle.load(f)
         
         graph = dgl.graph(data.cn, num_nodes=data.num_nodes)
-        graph.add_edges(data.neigboursp[:, 0], data.neighbours[:, 1]) # A-B
+        graph.add_edges(data.neighbours[:, 0], data.neighbours[:, 1]) # A-B
 
 
         return graph, data.sequences, data.sequnce_breaks

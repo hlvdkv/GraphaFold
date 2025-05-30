@@ -7,8 +7,8 @@ class Sample():
     def __init__(self, matrix:np.ndarray, index_nt_dict:dict, neighbours:list[tuple[int, int]]):
         self.matrix = np.array(matrix)
         self.num_nodes = matrix.shape[0]
-        self.cn = np.column_stack(np.where(matrix == 1)) # size [N,2]
-        self.non_cn = np.column_stack(np.where(matrix > 1)) # size [N,2]
+        self.cn = np.where(matrix == 1)
+        self.non_cn = np.where(matrix > 1)
         self.index_nt_dict = index_nt_dict
         self.neighbours = neighbours # TODO: add the reversed columns A-B and B-A
         self.sequences = self.extract_contiguous_sequences(index_nt_dict, neighbours)
