@@ -34,11 +34,11 @@ def load_idx_file(idx_file_path):
     return index_to_nt, np.array(neighbors)
 
 def custom_collate(batch):
-    graphs, labels1, labels2 = zip(*batch)
+    graphs, sequences, edge_candidates, edge_labels = zip(*batch)
     batched_graph = dgl.batch(graphs)
 
     # You can return labels as-is (list of lists) or process them here
-    return batched_graph, list(labels1), list(labels2)
+    return batched_graph, list(sequences), list(edge_candidates), list(edge_labels)
 
 def pad_matrix(matrix, num_nodes):
     current_size = matrix.shape[0]

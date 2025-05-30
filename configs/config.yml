@@ -1,11 +1,15 @@
 epochs: 10000
 batch_size: 32
 num_workers: 1
+wandb: False
+wandb_project: Graphafold
+checkpoint_dir: checkpoints
 data:
   train_dir: prep_data
-  val_dir: data/val/
+  val_dir: my_val
 model:
-  seq_hidden_dim: 512
-  cls_hidden_dim: 256
+  in_feats: 512
+  hidden_feats: 256
+  hidden_dim: 384
   edge_dim: 128
   gcn_layers: 2

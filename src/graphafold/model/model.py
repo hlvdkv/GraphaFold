@@ -1,17 +1,23 @@
 import dgl
+import lightning as L
 import torch
 from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 
-from graphafold.model import GNNModel
+from graphafold.model.gnn_component import GNNModel
 from rinalmo.pretrained import get_pretrained_model
 
 
-class Model(nn.Module):
-    def __init__(self, in_feats, edge_feats, hidden_feats, hidden_dim:int=384):
-        super(Model, self).__init__()
-        self.gnn_model = GNNModel(in_feats, edge_feats, hidden_feats)
+class GraphaFold(L.LightningModule):
+    def __init__(self,
+                 in_feats:int=512,
+                 edge_feats:int=128,
+                 hidden_feats:int=256,
+                 hidden_dim:int=384,
+                 gcn_layers:int=2):
+        super(GraphaFold, self).__init__()
+        self.gnn_model = GNNModel(in_feats, edge_feats, hidden_feats, gcn_layers)
         self.rinalmo, self.alphabet = get_pretrained_model(model_name="giga-v1")
         self.sequence_embedder = nn.Sequential([
                                     nn.Linear(1280, hidden_dim),  # RiNALMo embedding dim is 1280
@@ -26,7 +32,7 @@ class Model(nn.Module):
         )
         self.hidden_feats = hidden_feats
 
-    def forward(self, sequence:Tensor[str], g:dgl.DGLGraph, edge_candidates:Tensor) -> torch.Tensor:
+    def forward(self, g:dgl.DGLGraph, sequence:Tensor, edge_candidates:Tensor) -> torch.Tensor:
         """
         Forward pass through the model.
         Args:
@@ -50,8 +56,10 @@ class Model(nn.Module):
         combined = torch.cat([src, dst], dim=-1)  # [K, 2 * dim]
         logits = self.classifier(combined).squeeze(-1)  # [K]
         return logits
-
-
-
-
-
+    
+    def training_step(self, batch, batch_idx):
+        g, sequence, edge_candidates, labels = batch
+        logits = self(g, sequence, edge_candidates)
+        loss = F.binary_cross_entropy_with_logits(logits, labels.float())
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
+        return loss
