@@ -1,1 +1,1 @@
-from .gnn_component import GNNModel
+from .model import GraphaFold
