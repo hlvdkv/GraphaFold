@@ -62,7 +62,7 @@ def main(config):
         max_epochs=config_params['epochs'],
         logger=logger,
         callbacks=[
-            L.callbacks.ModelCheckpoint(
+            L.pytorch.callbacks.ModelCheckpoint(
                 dirpath=config_params['checkpoint_dir'],
                 filename='model-{epoch:02d}-{val_loss:.2f}',
                 monitor='val_loss',

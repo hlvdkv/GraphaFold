@@ -34,11 +34,25 @@ def load_idx_file(idx_file_path):
     return index_to_nt, np.array(neighbors)
 
 def custom_collate(batch):
-    graphs, sequences, edge_candidates, edge_labels = zip(*batch)
+    graphs, sequences, edge_candidates_list, edge_labels_list = zip(*batch)
     batched_graph = dgl.batch(graphs)
 
-    # You can return labels as-is (list of lists) or process them here
-    return batched_graph, list(sequences), list(edge_candidates), list(edge_labels)
+    # Compute node offsets for each graph in the batch
+    node_counts = [g.number_of_nodes() for g in graphs]
+    node_offsets = torch.cumsum(torch.tensor([0] + node_counts[:-1]), dim=0)
+
+    shifted_edge_candidates = []
+    all_edge_labels = []
+    for offset, edge_candidates, edge_labels in zip(node_offsets, edge_candidates_list, edge_labels_list):
+        # edge_candidates shape: [K, 2]
+        shifted = edge_candidates + offset  # Broadcasting: add offset to both columns
+        shifted_edge_candidates.append(shifted)
+        all_edge_labels.append(edge_labels)
+
+    edge_candidates = torch.cat(shifted_edge_candidates, dim=0)
+    edge_labels = torch.cat(all_edge_labels, dim=0)
+
+    return batched_graph, list(sequences), edge_candidates, edge_labels
 
 def pad_matrix(matrix, num_nodes):
     current_size = matrix.shape[0]
