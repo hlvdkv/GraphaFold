@@ -19,11 +19,12 @@ class GraphaFold(L.LightningModule):
         super(GraphaFold, self).__init__()
         self.gnn_model = GNNModel(in_feats, edge_feats, hidden_feats, gcn_layers)
         self.rinalmo, self.alphabet = get_pretrained_model(model_name="giga-v1")
-        self.sequence_embedder = nn.Sequential([
-                                    nn.Linear(1280, hidden_dim),  # RiNALMo embedding dim is 1280
-                                    nn.ReLU(),
-                                    nn.Linear(hidden_dim, hidden_feats)
-                                    ])
+
+        self.sequence_embedder = nn.Sequential(
+            nn.Linear(1280, hidden_feats),  # RiNALMo embedding dim is 1280
+            nn.ReLU(),
+            nn.Linear(hidden_feats, hidden_feats)
+        )
 
         self.classifier = nn.Sequential(
             nn.Linear(hidden_feats * 2, hidden_feats),
@@ -63,3 +64,7 @@ class GraphaFold(L.LightningModule):
         loss = F.binary_cross_entropy_with_logits(logits, labels.float())
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
