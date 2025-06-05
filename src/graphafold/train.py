@@ -28,6 +28,8 @@ def main(config):
     Main function to start the training process.
     This function will read the configuration file and initiate the training process.
     """
+    L.seed_everything(42, workers=True)
+    
     # Load configuration from the provided file
     config_params = load_config(config)
     print(f"Loaded configuration: {config_params}")

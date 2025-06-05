@@ -14,14 +14,16 @@ class GNNModel(nn.Module):
             gcn_layers (int): Number of GCN layers to use.
         """
         super(GNNModel, self).__init__()
-        self.node_proj = nn.Linear(in_feats, hidden_feats) # tu jest tylko funkcja liniowa, ktora bez aktywacji niewiele zmienia
+        self.node_proj = nn.Linear(in_feats, hidden_feats)
         edge_nn = nn.Sequential(
-            nn.Linear(edge_feats, hidden_feats * hidden_feats),
-            nn.ReLU()
+            nn.Linear(edge_feats, hidden_feats * hidden_feats),  # Assuming edge features are of size 2
+            nn.ReLU(),
         )
-        self.convs = [NNConv(hidden_feats, hidden_feats, edge_nn, aggregator_type='mean') for _ in range(gcn_layers)]
+        self.convs = nn.ModuleList([
+            NNConv(hidden_feats, hidden_feats, edge_nn, aggregator_type='mean') for _ in range(gcn_layers)
+        ])
 
-    def forward(self, g, node_features, edge_features=None):
+    def forward(self, g, node_features):
         """
         Forward pass through the GNN model.
         Args:
@@ -31,11 +33,9 @@ class GNNModel(nn.Module):
         Returns:
             torch.Tensor: Output node features after GNN layers.
         """
-        h = node_features # g.ndata['feat']
-        if edge_features is None:
-            e = g.edata['feat']
-        else:
-            e = edge_features
+        g.ndata['feat'] = node_features
+        h = g.ndata['feat']
+        e = g.edata['feat']
         h = self.node_proj(h)
         for conv in self.convs:
             h = conv(g, h, e)

@@ -1,5 +1,5 @@
 epochs: 10000
-batch_size: 32
+batch_size: 2
 num_workers: 1
 wandb: False
 wandb_project: Graphafold
@@ -11,5 +11,5 @@ model:
   in_feats: 512
   hidden_feats: 256
   hidden_dim: 384
-  edge_feats: 128
+  edge_feats: 2
   gcn_layers: 2

@@ -2,6 +2,7 @@ import os
 import pickle
 import dgl
 import random
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 from graphafold.data import Sample
@@ -27,8 +28,20 @@ class GraphDataset(Dataset):
         with open(sample_path, 'rb') as f:
             data = pickle.load(f)
         
-        graph = dgl.graph(data.cn, num_nodes=data.num_nodes)
-        graph.add_edges(data.neighbours[:, 0], data.neighbours[:, 1]) # A-B
+         # Add canonical and neighbor edges
+        src_cn, dst_cn = data.cn
+        src_nb, dst_nb = data.neighbours[:, 0], data.neighbours[:, 1]
+        all_src = np.concatenate([src_cn, src_nb])
+        all_dst = np.concatenate([dst_cn, dst_nb])
+        graph = dgl.graph((all_src, all_dst), num_nodes=data.num_nodes)
+
+        # Assign edge features
+        num_cn = len(src_cn)
+        num_nb = len(src_nb)
+        edge_features = torch.zeros(num_cn + num_nb, 2)
+        edge_features[:num_cn, 0] = 1  # canonical: [1, 0]
+        edge_features[num_cn:, 1] = 1  # neighbor: [0, 1]
+        graph.edata['feat'] = edge_features
         sequence = self.sequence_sep.join(data.sequences)
 
         edge_candidates, edge_labels = self.get_edge_candidates(data)
