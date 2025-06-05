@@ -17,7 +17,7 @@ class GraphaFold(L.LightningModule):
                  hidden_dim:int=384,
                  gcn_layers:int=2):
         super(GraphaFold, self).__init__()
-        self.gnn_model = GNNModel(in_feats, edge_feats, hidden_feats, gcn_layers)
+        self.gnn_model = GNNModel(hidden_feats, edge_feats, hidden_feats, gcn_layers)
         self.rinalmo, self.alphabet = get_pretrained_model(model_name="giga-v1")
 
         self.sequence_embedder = nn.Sequential(
@@ -42,15 +42,23 @@ class GraphaFold(L.LightningModule):
             torch.Tensor: Output logits from the GNN model.
         """
         self.rinalmo.eval()  # Set RiNALMo to evaluation mode
-        tokens = torch.tensor(self.alphabet.batch_tokenize(sequence), dtype=torch.int64)
+        
+        tokens = torch.tensor(self.alphabet.batch_tokenize(sequence), dtype=torch.int64, device=self.device)
+        # rna positions in flatten tokens are in places where token value > 4
+        flat_tokens = tokens.flatten()
+        # ignore special tokens and keep only RNA positions - values are in range 4-16
+        rna_positions = torch.where((flat_tokens > 4) & (flat_tokens < 16))[0]
+
         with torch.no_grad(), torch.cuda.amp.autocast():
             out_representation = self.rinalmo(tokens)["representation"]
         sequence_embedding = self.sequence_embedder(out_representation)
+        sequence_embedding = sequence_embedding.reshape(-1, sequence_embedding.shape[-1])  # Flatten to [batch_size * seq_len, hidden_feats]
+        sequence_embedding = sequence_embedding[rna_positions] # Keep only RNA positions
 
         # set features in nodes in the graph
         node_embeddings = self.gnn_model(g, node_features=sequence_embedding)
-        src = node_embeddings[edge_candidates[0]]  # [K, dim]
-        dst = node_embeddings[edge_candidates[1]]  # [K, dim]
+        src = node_embeddings[edge_candidates[:, 0]]
+        dst = node_embeddings[edge_candidates[:, 1]]
         # dot-product for scores
         # scores = src * dst
         # Concatenate and classify
@@ -62,9 +70,38 @@ class GraphaFold(L.LightningModule):
         g, sequence, edge_candidates, labels = batch
         logits = self(g, sequence, edge_candidates)
         loss = F.binary_cross_entropy_with_logits(logits, labels.float())
+        metrics = self.metrics(logits, labels)
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
         return loss
     
+    def validation_step(self, batch, batch_idx):
+        g, sequence, edge_candidates, labels = batch
+        logits = self(g, sequence, edge_candidates)
+        loss = F.binary_cross_entropy_with_logits(logits, labels.float())
+        metrics = self.metrics(logits, labels)
+        self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
+        return loss
+    
+    def metrics(self, logits, labels):
+        """ Calculate precision, recall, F1-score and accuracy for the predictions. """
+        preds = torch.sigmoid(logits) > 0.5  # Convert logits to binary predictions
+        tp = (preds & labels.bool()).sum().item()
+        fp = (preds & ~labels.bool()).sum().item()
+        fn = (~preds & labels.bool()).sum().item()
+        tn = (~preds & ~labels.bool()).sum().item()
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        accuracy = (tp + tn) / (tp + fp + fn + tn) if (tp + fp + fn + tn) > 0 else 0.0
+        return {
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1_score,
+            'accuracy': accuracy
+        }
+
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
