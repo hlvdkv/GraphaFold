@@ -84,6 +84,7 @@ class GraphDataset(Dataset):
             # Randomly sample negatives, same number as positives
             if len(neg_pool) >= num_pos:
                 neg_edges = random.sample(neg_pool, num_pos)
+                # neg_edges = neg_pool[:num_pos]  # take first num_pos from the pool
             else:
                 neg_edges = neg_pool  # fallback: use all available
             candidate_edges = pos_edges + neg_edges

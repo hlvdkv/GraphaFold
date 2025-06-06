@@ -23,7 +23,8 @@ class GraphaFold(L.LightningModule):
         self.sequence_embedder = nn.Sequential(
             nn.Linear(1280, hidden_feats),  # RiNALMo embedding dim is 1280
             nn.ReLU(),
-            nn.Linear(hidden_feats, hidden_feats)
+            nn.Linear(hidden_feats, hidden_feats),
+            nn.ReLU(),
         )
 
         self.classifier = nn.Sequential(

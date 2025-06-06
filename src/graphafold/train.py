@@ -2,6 +2,7 @@ import click
 import yaml
 from torch.utils.data import DataLoader
 import lightning as L
+from lightning.pytorch.loggers import WandbLogger
 import wandb
 from graphafold.dataset import GraphDataset
 from graphafold.data import custom_collate
@@ -50,11 +51,12 @@ def main(config):
         print(f"Edge labels batch size: {edge_labels.shape}")
         print(edge_labels[:5])
         break
+    
 
     if config_params['wandb']:
-        wandb.init(project=config_params['wandb_project'], name=config_params['wandb_run_name'])
+        wandb.init(project=config_params['wandb_project'])
         wandb.config.update(config_params)
-        logger = L.loggers.WandbLogger(
+        logger = WandbLogger(
             project=config_params['wandb_project'],
             config=config_params
         )
@@ -72,7 +74,10 @@ def main(config):
                 save_top_k=1,
                 mode='min'
             )
-        ]
+        ],
+        # accelerator="gpu",
+        # devices=1,
+        
     )
     # Initialize the model
     model = GraphaFold(
@@ -83,7 +88,7 @@ def main(config):
         gcn_layers=config_params['model']['gcn_layers']
     )
     # Start training
-    trainer.fit(model, train_loader) #, val_loader)
+    trainer.fit(model, train_loader, val_loader)
 
 if __name__ == "__main__":
     main()
