@@ -6,6 +6,8 @@ casp/
 
 my_exmp/
 examples-orig/
+train_prep/*
+val_prep/*
 exp1/*
 exp2/*
 examples/*

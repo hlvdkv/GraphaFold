@@ -55,6 +55,26 @@ class Sample():
 
         return break_indices
     
+    def is_valid(self):
+        """ Check if the sample is valid."""
+        if np.sum(self.cn) == 0:
+            print("Sample is invalid: no canonical edges found.")
+            return False
+        if np.sum(self.non_cn) == 0:
+            print("Sample is invalid: no non-canonical edges found.")
+            return False
+        if len(self.index_nt_dict) != self.num_nodes:
+            print(f"Sample is invalid: index_nt_dict length {len(self.index_nt_dict)} does not match num_nodes {self.num_nodes}.")
+            return False
+        if len("".join(self.sequences)) != len(self.matrix):
+            print(f"Sample is invalid: total sequence length {len(''.join(self.sequences))} does not match matrix size {len(self.matrix)}.")
+            return False
+        if len(self.neighbours) == 0:
+            print("Sample is invalid: no neighbours found.")
+            return False
+
+        return True
+    
     def save_to_pickle(self, file_path):
         """
         Save the sample to a pickle file.

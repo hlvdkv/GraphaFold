@@ -27,7 +27,6 @@ class GraphDataset(Dataset):
         sample_path = os.path.join(self.path, sample)
         with open(sample_path, 'rb') as f:
             data = pickle.load(f)
-        
          # Add canonical and neighbor edges
         src_cn, dst_cn = data.cn
         src_nb, dst_nb = data.neighbours[:, 0], data.neighbours[:, 1]
@@ -45,6 +44,7 @@ class GraphDataset(Dataset):
         sequence = self.sequence_sep.join(data.sequences)
 
         edge_candidates, edge_labels = self.get_edge_candidates(data)
+        assert len(edge_candidates) >0, f"Edge candidates should not be empty in sample {sample_path}"
 
         return graph, sequence, edge_candidates, edge_labels
     

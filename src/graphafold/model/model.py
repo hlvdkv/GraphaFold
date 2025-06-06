@@ -56,6 +56,8 @@ class GraphaFold(L.LightningModule):
         sequence_embedding = sequence_embedding[rna_positions] # Keep only RNA positions
 
         # set features in nodes in the graph
+        assert g.num_nodes() == sequence_embedding.shape[0], \
+            f"Graph nodes {g.num_nodes()} do not match sequence embedding size {sequence_embedding.shape[0]} for {sequence}"
         node_embeddings = self.gnn_model(g, node_features=sequence_embedding)
         src = node_embeddings[edge_candidates[:, 0]]
         dst = node_embeddings[edge_candidates[:, 1]]

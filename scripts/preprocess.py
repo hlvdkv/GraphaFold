@@ -36,8 +36,14 @@ def main(input, output):
             raise FileNotFoundError(f"Index file {idx_file} does not exist.")
         matrix = load_matrix(amt)
         index_nt_dict, neighbours = load_idx_file(idx_file)
-        assert matrix.shape[0] == len(index_nt_dict), f"Matrix size {matrix.shape[0]} does not match idx file size {len(index_nt_dict)}"
+        if matrix.shape[0] != len(index_nt_dict):
+            # raise ValueError(f"Matrix size {matrix.shape[0]} does not match idx file size {len(index_nt_dict)}")
+            print(f"Warning: Matrix size {matrix.shape[0]} does not match idx file size {len(index_nt_dict)}")
+            continue
+        # assert matrix.shape[0] == len(index_nt_dict), f"Matrix size {matrix.shape[0]} does not match idx file size {len(index_nt_dict)}"
         sample = Sample(matrix, index_nt_dict, neighbours)
+        if not sample.is_valid():
+            continue
         # create output directory if it doesn't exist
         output_dir = Path(output)
         output_dir.mkdir(parents=True, exist_ok=True)
