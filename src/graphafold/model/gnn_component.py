@@ -15,12 +15,12 @@ class GNNModel(nn.Module):
         """
         super(GNNModel, self).__init__()
         self.node_proj = nn.Linear(in_feats, hidden_feats)
-        edge_nn = nn.Sequential(
+        self.edge_nn = nn.Sequential(
             nn.Linear(edge_feats, hidden_feats * hidden_feats),  # Assuming edge features are of size 2
             nn.ReLU(),
-        )
+        )                
         self.convs = nn.ModuleList([
-            NNConv(hidden_feats, hidden_feats, edge_nn, aggregator_type='mean') for _ in range(gcn_layers)
+            NNConv(hidden_feats, hidden_feats, self.edge_nn, aggregator_type='mean') for _ in range(gcn_layers)
         ])
 
     def forward(self, g, node_features):

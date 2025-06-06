@@ -48,6 +48,7 @@ def main(config):
         print(f"Sample sequences: {sequences[:5]}")
         print(f"Edge candidates batch size: {edge_candidates.shape}")
         print(f"Edge labels batch size: {edge_labels.shape}")
+        print(edge_labels[:5])
         break
 
     if config_params['wandb']:
@@ -82,7 +83,7 @@ def main(config):
         gcn_layers=config_params['model']['gcn_layers']
     )
     # Start training
-    trainer.fit(model, train_loader, val_loader)
+    trainer.fit(model, train_loader) #, val_loader)
 
 if __name__ == "__main__":
     main()
