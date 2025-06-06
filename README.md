@@ -75,10 +75,13 @@ The output will be saved in the `results/` in the `*.amt` format.
 ## Training from scratch
 
 ### Data preparation
-TODO
+First, run the preprocessing script to convert your input files into the required format:
+```
+scripts/preprocess.py --input <path to amt and idx dir> --output <output dir>
+```
 ### Run training
 ```
-python src/graphafold/train.py --train_dir examples/ --model_dir models/ --epochs 100 --batch_size 32 --lr 0.001
+graphafold_train --config config/config.yml
 ```
 
 ## Output
