@@ -1,4 +1,5 @@
 import click
+from pathlib import Path
 import yaml
 from torch.utils.data import DataLoader
 import lightning as L
@@ -35,7 +36,11 @@ def main(config):
     config_params = load_config(config)
     print(f"Loaded configuration: {config_params}")
     train_ds = GraphDataset(config_params['data']['train_dir'])
-    val_ds = GraphDataset(config_params['data']['val_dir'], validation=True)
+    val_ds = GraphDataset(
+                    config_params['data']['val_dir'],
+                    validation=True,
+                    val_sampling_mode=config_params['data']['sampling_mode'],
+                    val_sampling_range=config_params['data']['sampling_range'])
     train_loader = DataLoader(train_ds, batch_size=config_params['batch_size'], shuffle=True, num_workers=config_params['num_workers'], collate_fn=custom_collate)
     val_loader = DataLoader(val_ds, batch_size=config_params['batch_size'], shuffle=False, num_workers=config_params['num_workers'], collate_fn=custom_collate)
     print(f"Training dataset size: {len(train_ds)}")
@@ -60,7 +65,9 @@ def main(config):
             project=config_params['wandb_project'],
             config=config_params
         )
+        checkpoint_dir = Path(config_params['checkpoint_dir']) / wandb.run.id
     else:
+        checkpoint_dir = Path(config_params['checkpoint_dir'])
         logger = None
     # Initialize the Lightning Trainer
     trainer = L.Trainer(
@@ -68,7 +75,7 @@ def main(config):
         logger=logger,
         callbacks=[
             L.pytorch.callbacks.ModelCheckpoint(
-                dirpath=config_params['checkpoint_dir'],
+                dirpath=checkpoint_dir,
                 filename='model-{epoch:02d}-{val_loss:.2f}',
                 monitor='val_loss',
                 save_top_k=1,

@@ -1,5 +1,5 @@
 epochs: 1000
-batch_size: 64
+batch_size: 128
 num_workers: 1
 wandb: True
 wandb_project: Graphafold
@@ -7,9 +7,11 @@ checkpoint_dir: checkpoints
 data:
   train_dir: train_prep
   val_dir: prep_data # prep_data
+  sampling_mode: range # alllowed: 'all', 'range'
+  sampling_range: 15 # sampling range around known canonical base pairs.
 model:
   in_feats: 512
   hidden_feats: 64
   hidden_dim: 384
   edge_feats: 2
-  gcn_layers: 2
+  gcn_layers: 1

@@ -82,14 +82,14 @@ class GraphaFold(L.LightningModule):
         g, sequence, edge_candidates, labels = batch
         logits = self(g, sequence, edge_candidates)
         loss = F.binary_cross_entropy_with_logits(logits, labels.float())
-        metrics = self.metrics(logits, labels)
+        metrics = self.metrics(logits, labels, prefix="val_")
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
         return loss
     
-    def metrics(self, logits, labels):
+    def metrics(self, logits, labels, prefix=""):
         """ Calculate precision, recall, F1-score and accuracy for the predictions. """
-        preds = torch.sigmoid(logits) > 0.5  # Convert logits to binary predictions
+        preds = torch.sigmoid(logits) > 0.8  # Convert logits to binary predictions
         tp = (preds & labels.bool()).sum().item()
         fp = (preds & ~labels.bool()).sum().item()
         fn = (~preds & labels.bool()).sum().item()
@@ -99,10 +99,10 @@ class GraphaFold(L.LightningModule):
         f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
         accuracy = (tp + tn) / (tp + fp + fn + tn) if (tp + fp + fn + tn) > 0 else 0.0
         return {
-            'precision': precision,
-            'recall': recall,
-            'f1_score': f1_score,
-            'accuracy': accuracy
+            f"{prefix}precision": precision,
+            f"{prefix}recall": recall,
+            f"{prefix}f1_score": f1_score,
+            f"{prefix}accuracy": accuracy,
         }
 
     def configure_optimizers(self):

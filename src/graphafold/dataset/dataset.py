@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from graphafold.data import Sample
 
 class GraphDataset(Dataset):
-    def __init__(self, path, validation:bool=False, sequence_sep:str="-"):
+    def __init__(self, path, validation:bool=False, sequence_sep:str="-", val_sampling_mode:str="all", val_sampling_range:int=15):
         super(GraphDataset, self).__init__()
         self.path = path
         self.samples = os.listdir(path)
@@ -18,6 +18,8 @@ class GraphDataset(Dataset):
         self.file_names = []
         self.validation = validation
         self.sequence_sep = sequence_sep
+        self.val_sampling_mode = val_sampling_mode
+        self.val_sampling_range = val_sampling_range
 
     def __len__(self):
         return len(self.samples)
@@ -67,12 +69,16 @@ class GraphDataset(Dataset):
         # Non-canonical edges (positives)
         non_cn_edges = set((int(i), int(j)) for i, j in zip(sample.non_cn[0], sample.non_cn[1]) if int(i) < int(j))
 
-        if self.validation:
+        if self.validation and self.val_sampling_mode == "all":
             # All possible pairs (i, j) with i < j, excluding canonical edges
             all_pairs = set((i, j) for i in range(num_nodes) for j in range(i+1, num_nodes))
             candidate_edges = list(all_pairs - cn_edges)
             # Label as 1 if in non-canonical, else 0
             edge_labels = [1 if edge in non_cn_edges else 0 for edge in candidate_edges]
+        elif self.validation and self.val_sampling_mode == "range":
+            # For each canonical pair canonical edge, the potential non-canonical one is in range +/- 15 nodes away
+            candidate_edges = self.get_range_sampling(cn_nodes=cn_edges, num_nodes=num_nodes)
+            edge_labels = [1 if (i, j) in non_cn_edges else 0 for i, j in candidate_edges]
         else:
             # Positive: all non-canonical edges
             pos_edges = list(non_cn_edges)
@@ -94,4 +100,26 @@ class GraphDataset(Dataset):
         edge_labels = torch.tensor(edge_labels, dtype=torch.float)
         return edge_candidates, edge_labels
 
+    def get_range_sampling(self, cn_nodes:list[tuple[int,int]], num_nodes:int):
+        """
+        For each canonical edge, find non-canonical edges within a range.
+        """
+        range_pairs = set()
+        cn_nodes = set((int(i), int(j)) for i, j in cn_nodes if int(i) < int(j))
+        cn_src = set([i for i, j in cn_nodes])
+        cn_dst = set([j for i, j in cn_nodes])
+        for pair in cn_nodes:
+            i, j = pair
+            # Get range of nodes around i and j
+            start_i = max(0, i - self.val_sampling_range)
+            end_i = min(num_nodes, i + self.val_sampling_range + 1)
+            start_j = max(0, j - self.val_sampling_range)
+            end_j = min(num_nodes, j + self.val_sampling_range + 1)
 
+            for ni in range(start_i, end_i):
+                for nj in range(start_j, end_j):
+                    if ni < nj and \
+                        not (ni in cn_src or nj in cn_dst) and \
+                        not (nj in cn_src or ni in cn_dst):
+                        range_pairs.add((ni, nj))
+        return np.array(list(range_pairs - cn_nodes))
