@@ -65,7 +65,8 @@ def main(config):
             project=config_params['wandb_project'],
             config=config_params
         )
-        checkpoint_dir = Path(config_params['checkpoint_dir']) / wandb.run.id
+        # use run name as checkpoint directory
+        checkpoint_dir = Path(config_params['checkpoint_dir']) / wandb.run.name
     else:
         checkpoint_dir = Path(config_params['checkpoint_dir'])
         logger = None
