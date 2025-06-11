@@ -10,7 +10,7 @@ class Sample():
         self.cn = np.where(matrix == 1)
         self.non_cn = np.where(matrix > 1)
         self.index_nt_dict = index_nt_dict
-        self.neighbours = neighbours # TODO: add the reversed columns A-B and B-A
+        self.neighbours = neighbours
         self.sequences = self.extract_contiguous_sequences(index_nt_dict, neighbours)
         self.sequnce_breaks = self.get_sequence_breaks(self.sequences)
         pass

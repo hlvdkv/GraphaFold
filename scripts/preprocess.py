@@ -1,5 +1,6 @@
 import click
 from pathlib import Path
+import numpy as np
 from graphafold.data import load_matrix, load_idx_file, Sample
 
 @click.command()
@@ -41,6 +42,9 @@ def main(input, output):
             print(f"Warning: Matrix size {matrix.shape[0]} does not match idx file size {len(index_nt_dict)}")
             continue
         # assert matrix.shape[0] == len(index_nt_dict), f"Matrix size {matrix.shape[0]} does not match idx file size {len(index_nt_dict)}"
+        # b_a_neighbours - flip columns (0, 1) to (1, 0) for neighbours
+        b_a_neighbours = np.array([(b, a) for a, b in neighbours])
+        neighbours = np.concatenate([neighbours, b_a_neighbours], axis=0)
         sample = Sample(matrix, index_nt_dict, neighbours)
         if not sample.is_valid():
             continue
