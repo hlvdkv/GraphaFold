@@ -79,7 +79,20 @@ class GraphDataset(Dataset):
             # For each canonical pair canonical edge, the potential non-canonical one is in range +/- 15 nodes away
             candidate_edges = self.get_range_sampling(cn_nodes=cn_edges, num_nodes=num_nodes)
             edge_labels = [1 if (i, j) in non_cn_edges else 0 for i, j in candidate_edges]
-        else:
+        elif not self.validation and self.val_sampling_mode == "range":
+            candidate_edges = self.get_range_sampling(cn_nodes=cn_edges, num_nodes=num_nodes)
+            edge_labels = [1 if (i, j) in non_cn_edges else 0 for i, j in candidate_edges]
+            pos_edges = [edge for edge, label in zip(candidate_edges, edge_labels) if label == 1]
+            neg_edges = [edge for edge, label in zip(candidate_edges, edge_labels) if label == 0]
+            # Randomly sample negatives, same number as positives
+            num_pos = len(pos_edges)
+            if len(neg_edges) >= num_pos:
+                neg_edges = random.sample(neg_edges, num_pos)
+            else:
+                neg_edges = neg_edges
+            candidate_edges = pos_edges + neg_edges
+            edge_labels = [1] * len(pos_edges) + [0] * len(neg_edges)
+        elif not self.validation and self.val_sampling_mode == "all":
             # Positive: all non-canonical edges
             pos_edges = list(non_cn_edges)
             num_pos = len(pos_edges)
