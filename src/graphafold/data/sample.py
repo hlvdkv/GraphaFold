@@ -10,8 +10,9 @@ class Sample():
         self.cn = np.where(matrix == 1)
         self.non_cn = np.where(matrix > 1)
         self.index_nt_dict = index_nt_dict
-        self.neighbours = neighbours
-        self.sequences = self.extract_contiguous_sequences(index_nt_dict, neighbours)
+        self.neighbours = neighbours # edges a-b and b-a
+        a_b_neigbours = neighbours[:len(neighbours)//2]
+        self.sequences = self.extract_contiguous_sequences(index_nt_dict, a_b_neigbours)
         self.sequnce_breaks = self.get_sequence_breaks(self.sequences)
         pass
 

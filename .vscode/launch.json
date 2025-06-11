@@ -1,0 +1,30 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/graphafold/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config", "configs/config.yml"
+            ]
+        },
+        {
+            "name": "preprocess",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/preprocess.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--input", "exp1",
+                "--output", "exp1_processed",
+            ]
+        }
+    ]
+}
