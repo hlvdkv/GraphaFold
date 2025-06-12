@@ -72,7 +72,8 @@ class GraphaFold(L.LightningModule):
     def training_step(self, batch, batch_idx):
         g, sequence, edge_candidates, labels = batch
         logits = self(g, sequence, edge_candidates)
-        loss = F.binary_cross_entropy_with_logits(logits, labels.float())
+        # loss = F.binary_cross_entropy_with_logits(logits, labels.float())
+        loss = self.focal_loss(logits, labels.float())
         metrics = self.metrics(logits, labels)
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
@@ -81,7 +82,8 @@ class GraphaFold(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         g, sequence, edge_candidates, labels = batch
         logits = self(g, sequence, edge_candidates)
-        loss = F.binary_cross_entropy_with_logits(logits, labels.float())
+        # loss = F.binary_cross_entropy_with_logits(logits, labels.float())
+        loss = self.focal_loss(logits, labels.float())
         metrics = self.metrics(logits, labels, prefix="val_")
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
@@ -104,6 +106,14 @@ class GraphaFold(L.LightningModule):
             f"{prefix}f1_score": f1_score,
             f"{prefix}accuracy": accuracy,
         }
+    
+    def focal_loss(self, logits, targets, alpha=0.25, gamma=2.0):
+        BCE_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+        probs = torch.sigmoid(logits)
+        pt = torch.where(targets == 1, probs, 1 - probs)
+        focal_factor = (1 - pt) ** gamma
+        alpha_factor = torch.where(targets == 1, alpha, 1 - alpha)
+        return (alpha_factor * focal_factor * BCE_loss).mean()
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)

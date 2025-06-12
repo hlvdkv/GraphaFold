@@ -38,6 +38,5 @@ class GNNModel(nn.Module):
         e = g.edata['feat']
         h = self.node_proj(h)
         for conv in self.convs:
-            h = conv(g, h, e)
-            h = F.relu(h)
+            h = conv(g, h, e) # relu is not needed here, as it is applied in the NNConv layer
         return h
