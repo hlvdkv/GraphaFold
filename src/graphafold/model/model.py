@@ -73,7 +73,9 @@ class GraphaFold(L.LightningModule):
         g, sequence, edge_candidates, labels = batch
         logits = self(g, sequence, edge_candidates)
         # loss = F.binary_cross_entropy_with_logits(logits, labels.float())
-        loss = self.focal_loss(logits, labels.float())
+        pos_weight = torch.tensor([10.0], device=self.device)  # Adjust pos_weight based on your dataset
+        loss = nn.BCEWithLogitsLoss(pos_weight=pos_weight)(logits, labels.float())
+        # loss = self.focal_loss(logits, labels.float())
         metrics = self.metrics(logits, labels)
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
@@ -83,7 +85,9 @@ class GraphaFold(L.LightningModule):
         g, sequence, edge_candidates, labels = batch
         logits = self(g, sequence, edge_candidates)
         # loss = F.binary_cross_entropy_with_logits(logits, labels.float())
-        loss = self.focal_loss(logits, labels.float())
+        pos_weight = torch.tensor([10.0], device=self.device)  # Adjust pos_weight based on your dataset
+        loss = nn.BCEWithLogitsLoss(pos_weight=pos_weight)(logits, labels.float())
+        # loss = self.focal_loss(logits, labels.float())
         metrics = self.metrics(logits, labels, prefix="val_")
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True)
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)

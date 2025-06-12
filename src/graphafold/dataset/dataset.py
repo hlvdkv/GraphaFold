@@ -121,6 +121,8 @@ class GraphDataset(Dataset):
         cn_nodes = set((int(i), int(j)) for i, j in cn_nodes if int(i) < int(j))
         cn_src = set([i for i, j in cn_nodes])
         cn_dst = set([j for i, j in cn_nodes])
+        allowed_srcs = set()
+        allowed_dsts = set()
         for pair in cn_nodes:
             i, j = pair
             # Get range of nodes around i and j
@@ -130,9 +132,14 @@ class GraphDataset(Dataset):
             end_j = min(num_nodes, j + self.val_sampling_range + 1)
 
             for ni in range(start_i, end_i):
-                for nj in range(start_j, end_j):
-                    if ni < nj and \
-                        not (ni in cn_src or nj in cn_dst) and \
-                        not (nj in cn_src or ni in cn_dst):
-                        range_pairs.add((ni, nj))
+                allowed_srcs.add(ni)
+            for nj in range(start_j, end_j):
+                allowed_dsts.add(nj)
+
+        for ni in allowed_srcs:
+            for nj in allowed_dsts:
+                if ni < nj and \
+                    not (ni in cn_src or nj in cn_dst) and \
+                    not (nj in cn_src or ni in cn_dst): # multiplets
+                    range_pairs.add((ni, nj))
         return np.array(list(range_pairs - cn_nodes))

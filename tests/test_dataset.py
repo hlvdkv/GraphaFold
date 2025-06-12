@@ -70,7 +70,7 @@ class TestGraphDataset:
                                             [8, 18],
                                             [1, 16],
                                             [1, 17],
-                                            # [1, 18], # extreme values in range
+                                            [1, 18],
                                             [2, 16],
                                             [2, 17],
                                             [2, 18],
@@ -83,7 +83,7 @@ class TestGraphDataset:
                                             [7, 11],
                                             [7, 12],
                                             [7, 13],
-                                            # [8, 11], # extreme values in range
+                                            [8, 11],
                                             [8, 12],
                                             [8, 13]])
         sampling_edges = dataset.get_range_sampling(cn_edges, num_nodes)
