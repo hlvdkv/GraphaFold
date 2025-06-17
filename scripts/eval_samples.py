@@ -15,6 +15,11 @@ def main():
             # remove the sample file
             sample_file.unlink()
             continue
+        if sample.non_cn[0].shape[0] == 0:
+            print(f"Sample {sample_file.stem} is invalid: no non-canonical edges found.")
+            problems += 1
+            sample_file.unlink()
+            continue
     print(f"Total problems found: {problems}")
 if __name__ == "__main__":
     main()

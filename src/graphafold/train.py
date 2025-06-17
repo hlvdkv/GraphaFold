@@ -35,7 +35,9 @@ def main(config):
     # Load configuration from the provided file
     config_params = load_config(config)
     print(f"Loaded configuration: {config_params}")
-    train_ds = GraphDataset(config_params['data']['train_dir'])
+    train_ds = GraphDataset(config_params['data']['train_dir'],
+                            val_sampling_mode=config_params['data']['sampling_mode'],
+                            val_sampling_range=config_params['data']['sampling_range'])
     val_ds = GraphDataset(
                     config_params['data']['val_dir'],
                     validation=True,
@@ -89,10 +91,8 @@ def main(config):
     )
     # Initialize the model
     model = GraphaFold(
-        in_feats=config_params['model']['in_feats'],
         edge_feats=config_params['model']['edge_feats'],
         hidden_feats=config_params['model']['hidden_feats'],
-        hidden_dim=config_params['model']['hidden_dim'],
         gcn_layers=config_params['model']['gcn_layers']
     )
     # Start training

@@ -13,6 +13,10 @@ exp2/*
 examples/*
 *.txt
 *.csv
+train_exp/*
+checkpoints/*
+my_val/*
+prep_data/*
 
 wandb/
 __pycache__/

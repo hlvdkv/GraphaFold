@@ -81,16 +81,19 @@ class GraphDataset(Dataset):
             edge_labels = [1 if (i, j) in non_cn_edges else 0 for i, j in candidate_edges]
         elif not self.validation and self.val_sampling_mode == "range":
             candidate_edges = self.get_range_sampling(cn_nodes=cn_edges, num_nodes=num_nodes)
+            assert len(candidate_edges) > 0, \
+                f"Candidate edges should not be empty in sample {self.path} with range sampling"
             edge_labels = [1 if (i, j) in non_cn_edges else 0 for i, j in candidate_edges]
             pos_edges = [edge for edge, label in zip(candidate_edges, edge_labels) if label == 1]
             neg_edges = [edge for edge, label in zip(candidate_edges, edge_labels) if label == 0]
-            # Randomly sample negatives, same number as positives
+            if len(pos_edges) == 0:
+                pos_edges = list(non_cn_edges)
             num_pos = len(pos_edges)
-            if len(neg_edges) >= num_pos:
+            if len(neg_edges) > num_pos:
                 neg_edges = random.sample(neg_edges, num_pos)
-            else:
-                neg_edges = neg_edges
             candidate_edges = pos_edges + neg_edges
+            assert len(candidate_edges) > 0, \
+                f"Candidate edges should not be empty in sample {self.path}"
             edge_labels = [1] * len(pos_edges) + [0] * len(neg_edges)
         elif not self.validation and self.val_sampling_mode == "all":
             # Positive: all non-canonical edges
@@ -109,8 +112,8 @@ class GraphDataset(Dataset):
             candidate_edges = pos_edges + neg_edges
             edge_labels = [1] * len(pos_edges) + [0] * len(neg_edges)
 
-        edge_candidates = torch.tensor(candidate_edges, dtype=torch.long)
-        edge_labels = torch.tensor(edge_labels, dtype=torch.float)
+        edge_candidates = torch.tensor (np.array(candidate_edges), dtype=torch.long)
+        edge_labels = torch.tensor(np.array(edge_labels), dtype=torch.float)
         return edge_candidates, edge_labels
 
     def get_range_sampling(self, cn_nodes:list[tuple[int,int]], num_nodes:int):
@@ -139,7 +142,7 @@ class GraphDataset(Dataset):
         for ni in allowed_srcs:
             for nj in allowed_dsts:
                 if ni < nj and \
-                    not (ni in cn_src or nj in cn_dst) and \
-                    not (nj in cn_src or ni in cn_dst): # multiplets
+                    not (ni in cn_src and nj in cn_dst) and \
+                    not (nj in cn_src and ni in cn_dst): # multiplets
                     range_pairs.add((ni, nj))
         return np.array(list(range_pairs - cn_nodes))

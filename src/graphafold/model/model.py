@@ -11,10 +11,8 @@ from rinalmo.pretrained import get_pretrained_model
 
 class GraphaFold(L.LightningModule):
     def __init__(self,
-                 in_feats:int=512,
                  edge_feats:int=128,
                  hidden_feats:int=256,
-                 hidden_dim:int=384,
                  gcn_layers:int=2):
         super(GraphaFold, self).__init__()
         self.gnn_model = GNNModel(hidden_feats, edge_feats, hidden_feats, gcn_layers)

@@ -93,6 +93,47 @@ class TestGraphDataset:
         assert sam_edges_set == expected_sampling_edges_set, \
             "Range sampling did not produce the expected edges."
 
+    def test_range_sampling2(self):
+        """Test that range sampling works correctly."""
+        dataset = GraphDataset(self.dataset_path, validation=True, val_sampling_mode="range", val_sampling_range=2)
+        num_nodes = 20
+        neigh1 = np.arange(10)
+        neigh2 = np.arange(10, 20)
+        cn_src = [0,10]
+        cn_dst = [9, 19]
+        cn_edges = np.array([cn_src, cn_dst]).T
+        expected_sampling_edges = np.array([[1, 11],
+                                            [1, 12],
+                                            [2, 11],
+                                            [2, 12],
+                                            [8, 11],
+                                            [8, 12],
+                                            [7, 11],
+                                            [7, 12],
+                                            [1, 17],
+                                            [1, 18],
+                                            [2, 17],
+                                            [2, 18],
+                                            [7, 17],
+                                            [7, 18],
+                                            [8, 17],
+                                            [8, 18],
+                                            [11, 17],
+                                            [11, 18],
+                                            [12, 17],
+                                            [12, 18],
+                                            [1, 7],
+                                            [1, 8],
+                                            [2, 7],
+                                            [2, 8],
+                                            ])
+        sampling_edges = dataset.get_range_sampling(cn_edges, num_nodes)
+        # sort edges by 1 column, then by 2 column
+        sam_edges_set = set(map(tuple, sampling_edges.tolist()))
+        expected_sampling_edges_set = set(map(tuple, expected_sampling_edges.tolist()))
+        assert sam_edges_set == expected_sampling_edges_set, \
+            "Range sampling did not produce the expected edges."
+
 
 
         
