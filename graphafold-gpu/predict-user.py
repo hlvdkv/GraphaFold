@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from tqdm import tqdm
+from utils import parse_dot2out
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -86,11 +87,16 @@ def batched_predict(g, model, batch=50_000):
 
 # main 
 def main(args):
+    if os.path.exists(args.input):
+        print(f"Parsing input file {args.input} ...")
+        idx_file, cmt_file = parse_dot2out(args.input)
+        idx_dir = os.path.dirname(idx_file)
+        cmt_dir = os.path.dirname(cmt_file)
     ckpt  = torch.load(args.model, map_location="cpu")
     model = GNN().to(device); model.load_state_dict(ckpt["state"]); model.eval()
     thr   = ckpt["threshold"]
 
-    dirs = {"amt": args.amt_dir, "cmt": args.cmt_dir, "idx": args.idx_dir}
+    dirs = {"amt": args.amt_dir, "cmt": cmt_dir, "idx": idx_dir}
     os.makedirs(args.out_dir, exist_ok=True)
 
     all_metrics = []
@@ -104,58 +110,25 @@ def main(args):
             if not fname.endswith(".amt"): continue
             base = fname[:-4]
             if not all(os.path.exists(os.path.join(v, f"{base}.{ext}"))
-                       for v, ext in ((args.cmt_dir,"cmt"), (args.idx_dir,"idx"))):
+                       for v, ext in ((cmt_dir,"cmt"), (idx_dir,"idx"))):
                 print(f"[skip] {base} no files in the directory"); continue
 
             g, noncan = build_graph(base, dirs)
             pairs, probs = batched_predict(g, model, args.batch)
-
             preds  = (probs >= thr)
-            labels = np.array([noncan[i, j] for i, j in pairs])
-
-            acc = accuracy_score(labels, preds)
-            P   = precision_score(labels, preds, zero_division=0)
-            R   = recall_score(labels, preds, zero_division=0)
-            F1  = f1_score(labels, preds, zero_division=0)
-            inf = math.sqrt(P * R) if P * R > 0 else 0.0
-
-            pos_cnt = labels.sum(); neg_cnt = len(labels) - pos_cnt
-            print(f"\n {base}")
-            print(f"  Accuracy={acc:.3f}  Precision={P:.3f}  Recall={R:.3f}  "
-                  f"F1={F1:.3f}  inf={inf:.3f}  Pos={int(pos_cnt):>3}, Neg={int(neg_cnt):>4}")
-
-            writer.writerow([base, f"{acc:.3f}", f"{P:.3f}", f"{R:.3f}",
-                             f"{F1:.3f}", f"{inf:.3f}", int(pos_cnt), int(neg_cnt)])
-
-            all_metrics.append((acc, P, R, F1, inf))
 
             # csv
             out = np.column_stack([pairs, probs, preds.astype(int)])
             np.savetxt(os.path.join(args.out_dir, f"{base}_pred.csv"),
                        out, fmt=["%d","%d","%.6f","%d"],
                        delimiter=",", header="i,j,prob,label", comments="")
-
-        # średnie 
-        accs, Ps, Rs, F1s, infs = map(np.mean, zip(*all_metrics))
-        print("\nMean metrics:")
-        print(f"  Accuracy:  {accs:.3f}")
-        print(f"  Precision: {Ps:.3f}")
-        print(f"  Recall:    {Rs:.3f}")
-        print(f"  F1-score:  {F1s:.3f}")
-        print(f"  inf-score: {infs:.3f}")
-
-        writer.writerow(["GLOBAL", f"{accs:.3f}", f"{Ps:.3f}", f"{Rs:.3f}",
-                         f"{F1s:.3f}", f"{infs:.3f}", "-", "-"])
+            # TODO: output to dot file or bpseq
 
 # CLI 
 if __name__ == "__main__":
     a = argparse.ArgumentParser()
     a.add_argument("--model", default="model.pth")
-    a.add_argument("--amt_dir", default="TestSet/amt")
-    a.add_argument("--cmt_dir", default="TestSet/cmt")
-    a.add_argument("--idx_dir", default="TestSet/idx")
+    a.add_argument("--input", default="example.dot", help="Input file in dot format")
     a.add_argument("--out_dir", default="predictions_full")
-    a.add_argument("--batch",   type=int, default=50_000)
-    a.add_argument("--csv_out", default="metrics_full.csv",
-                   help="Save metrics to this CSV file")
+    a.add_argument("--batch",   type=int, default=1)
     main(a.parse_args())
