@@ -40,12 +40,12 @@ def write_cmt_file(sequences, dotbrackets, cmt_path):
             matrix[j, i] = 1
 
     # Covalent bonds *within chains only*
-    offset = 0
-    for seq in sequences:
-        for i in range(len(seq) - 1):
-            matrix[offset + i, offset + i + 1] = -1
-            matrix[offset + i + 1, offset + i] = -1
-        offset += len(seq)
+    # offset = 0
+    # for seq in sequences:
+    #     for i in range(len(seq) - 1):
+    #         matrix[offset + i, offset + i + 1] = -1
+    #         matrix[offset + i + 1, offset + i] = -1
+    #     offset += len(seq)
 
     # Save matrix to file
     with open(cmt_path, 'w') as f:
@@ -65,12 +65,38 @@ def parse_dot2out(input_file_path):
     cmt_path = os.path.join(tmpdir, "tmp.cmt")
 
     sequences, dotbrackets = parse_input_file(input_file_path)
+    neighbs = []
+    added = 0
+    for seq in sequences:
+        neighbs.append(np.arange(added, added + len(seq)))
+        added += len(seq)   
+
 
     write_idx_file(sequences, idx_path)
     write_cmt_file(sequences, dotbrackets, cmt_path)
 
     print(f"Files written to {tmpdir}")
-    return idx_path, cmt_path
+    return idx_path, cmt_path, neighbs, sequences
+
+def fill_mat_with_pairs(mat, pairs):
+    """Fill a matrix with base pairs."""
+    for i, j in pairs:
+        mat[i, j] = 1
+        mat[j, i] = 1
+    return mat
+
+def mat_to_bpseq(mat, sequences):
+    """Convert a matrix to BPSEQ format."""
+    bpseq = []
+    idx = 1
+    for seq in sequences:
+        for i, nt in enumerate(seq):
+            pair_idx = np.where(mat[i, :] == 1)[0]
+            pair = pair_idx[0] + 1 if len(pair_idx) > 0 else 0
+            bpseq.append(f"{idx} {nt} {pair}")
+            idx += 1
+    return '\n'.join(bpseq)
+
 
 if __name__ == "__main__":
     import sys
