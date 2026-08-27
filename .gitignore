@@ -1,0 +1,51 @@
+# Operating-system and editor files
+.DS_Store
+.idea/
+.vscode/
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+.venv/
+venv/
+
+# Model and package caches
+.cache/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+checkpoints/*
+!checkpoints/README.md
+
+# Local datasets and archives
+TrainingSet/
+TrainingSet_structures/
+TrainingSet.zip
+CaspRNA2/
+*.zip
+*.tar
+*.tar.gz
+
+# Training runs and generated predictions
+runs/
+outputs/
+output-model-curves/
+graphafold-a100*/
+graphafold-learned-ablation/
+CaspRNA2-graphafold*/
+
+# Generated analysis artefacts
+*.log
+
+# Obsolete pre-redesign prototype (kept locally for historical comparison)
+bimodel-gat.py

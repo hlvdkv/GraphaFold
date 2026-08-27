@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.pt binary
+*.pth binary
+*.ckpt binary
+*.safetensors binary
+*.png binary
+*.pdf binary
