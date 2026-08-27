@@ -1,5 +1,8 @@
 # Training and reproducibility
 
+The training set and released `GraphaFold`/`GraphaFold-ablation` checkpoints
+are archived on [Zenodo](https://doi.org/10.5281/zenodo.22125162).
+
 ## Hardware
 
 Training is designed for a CUDA GPU and refuses to start when CUDA is not
@@ -91,4 +94,3 @@ Keep the following together for each reported experiment:
 
 The external-test threshold must come from the checkpoint. Do not choose a new
 threshold on the benchmark.
-

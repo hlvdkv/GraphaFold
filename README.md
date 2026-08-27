@@ -73,6 +73,16 @@ Before a long run, verify the dependency versions and pretrained weights:
 PYTHONNOUSERSITE=1 graphafold check-rinalmo
 ```
 
+## Models and training data
+
+The pretrained `GraphaFold` and `GraphaFold-ablation` checkpoints, together
+with the training set, are available from Zenodo:
+
+**[doi:10.5281/zenodo.22125162](https://doi.org/10.5281/zenodo.22125162)**
+
+After downloading, place model files in `checkpoints/` and extract the dataset
+as `TrainingSet/` or pass its location explicitly with `--data-root`.
+
 ## Quick start
 
 ### Predict new interactions
@@ -197,8 +207,10 @@ audit_dataset.py     legacy-compatible audit wrapper
 ```
 
 Large training data, benchmark data, checkpoints, run directories and generated
-predictions are intentionally excluded from Git. See
-[`checkpoints/README.md`](checkpoints/README.md) for distributing model weights.
+predictions are intentionally excluded from Git. Model checkpoints and the
+training set are archived on
+[Zenodo](https://doi.org/10.5281/zenodo.22125162). See
+[`checkpoints/README.md`](checkpoints/README.md) for the expected local layout.
 
 ## Documentation
 
